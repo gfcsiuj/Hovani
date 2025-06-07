@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hovani - صندوق أدواتك الرقمي</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js'></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; }
+        :root {
+            --bg-color: #101010; --card-bg: #1a1a1a; --text-color: #e0e0e0; --primary-color: #8A2BE2; --primary-hover: #9932CC; --shadow-color: rgba(138, 43, 226, 0.2); --logo-color: var(--primary-color); --input-bg: rgba(255, 255, 255, 0.05);
+        }
+        .theme-light {
+            --bg-color: #f8f9fa; --card-bg: #ffffff; --text-color: #333333; --primary-color: #00BFFF; --primary-hover: #1E90FF; --shadow-color: rgba(0, 191, 255, 0.2); --logo-color: var(--primary-color); --input-bg: rgba(0, 0, 0, 0.05);
+        }
+        .theme-sea {
+            --bg-color: linear-gradient(to bottom, #87CEEB, #4682B4); --card-bg: rgba(255, 255, 255, 0.2); --text-color: #000033; --primary-color: #ffffff; --primary-hover: #f0f8ff; --shadow-color: rgba(0, 0, 51, 0.3); --logo-color: #ffffff; --input-bg: rgba(0, 0, 0, 0.1);
+        }
+        .theme-summer {
+            --bg-color: #FFFBEA; --card-bg: #ffffff; --text-color: #5D4037; --primary-color: #FF8C00; --primary-hover: #FFA500; --shadow-color: rgba(255, 140, 0, 0.2); --logo-color: var(--primary-color); --input-bg: rgba(0, 0, 0, 0.05);
+        }
+        body { background: var(--bg-color); color: var(--text-color); transition: background 0.5s ease, color 0.5s ease; overflow-x: hidden; }
+        .tool-control, .drawing-tool { background-color: var(--input-bg); border: 1px solid transparent; transition: all 0.2s ease; }
+        .drawing-tool.active { background-color: var(--primary-color); color: white; border-color: var(--primary-hover); }
+        .drawing-tool.active svg { color: white !important; }
+        input, select, textarea { background-color: var(--input-bg) !important; color: var(--text-color) !important; border: 1px solid var(--shadow-color) !important; border-radius: 0.5rem; }
+        button { background-color: var(--primary-color); border-radius: 0.5rem; transition: background-color 0.2s ease; }
+        button:hover { background-color: var(--primary-hover); }
+        .tool-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .tool-card:hover { transform: translateY(-5px) scale(1.03); box-shadow: 0 0 30px var(--shadow-color); }
+        .todo-item.completed span { text-decoration: line-through; opacity: 0.5; }
+        .calc-btn { background-color: var(--card-bg); color: var(--text-color); padding: 1rem; border-radius: 0.75rem; font-size: 1.25rem; }
+        .op-btn { color: var(--primary-color); }
+        .eq-btn { background-color: var(--primary-color) !important; color: #fff !important; }
+        #logo-container { width: 32px; height: 32px; position: relative; }
+        .logo-part { position: absolute; width: 12px; height: 100%; background-color: var(--logo-color); transition: background-color 0.5s ease; }
+        .logo-part.left { left: 0; }
+        .logo-part.right { right: 0; }
+        #logo-container::before { content: ''; position: absolute; left: 50%; top: 50%; width: 16px; height: 3px; background: var(--logo-color); transform: translate(-50%, -50%) rotate(-30deg); transition: background-color 0.5s ease; }
+        .page { position: absolute; width: 100%; top: 80px; left: 0; padding: 1rem 2rem; transition: opacity 0.4s ease-out, transform 0.4s ease-out; visibility: hidden; opacity: 0; }
+        .page.active { transform: translateX(0); visibility: visible; opacity: 1; }
+        .page.inactive-left { transform: translateX(-20px); }
+        .page.inactive-right { transform: translateX(20px); }
+    </style>
+</head>
+<body class="antialiased theme-neon">
+
+    <header class="p-4 flex justify-between items-center fixed top-0 left-0 right-0 z-50 backdrop-blur-sm" style="background-color: rgba(0,0,0,0.2);">
+        <div class="flex items-center gap-4">
+            <div id="theme-switcher" class="relative">
+                <button id="theme-menu-button" class="p-2 rounded-full focus:outline-none focus:ring-2" style="border-width: 1px; border-color: var(--logo-color); color: var(--logo-color);"><svg class="w-6 h-6 pointer-events-none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg></button>
+                <div id="theme-menu" class="hidden absolute top-full mt-2 w-48 rounded-lg shadow-lg py-1" style="background-color: var(--card-bg);">
+                    <a href="#" data-theme="theme-neon" class="theme-option block px-4 py-2 text-sm">🔮 ليالي النيون</a>
+                    <a href="#" data-theme="theme-light" class="theme-option block px-4 py-2 text-sm">☀️ أبيض نقي</a>
+                    <a href="#" data-theme="theme-sea" class="theme-option block px-4 py-2 text-sm">🌊 نسيم البحر</a>
+                    <a href="#" data-theme="theme-summer" class="theme-option block px-4 py-2 text-sm">🌅 غروب الشمس</a>
+                </div>
+            </div>
+            <a href="#" id="home-link"><div id="logo-container"><div class="logo-part left"></div><div class="logo-part right"></div></div></a>
+        </div>
+        <h1 class="text-3xl font-bold tracking-wider">hovani</h1>
+    </header>
+
+    <main class="relative pt-16">
+        <div id="home-page" class="page active">
+            <div id="tabs-container" class="mb-8 border-b" style="border-color: var(--primary-color);">
+                <nav class="flex -mb-px" aria-label="Tabs">
+                    <a href="#" data-tab="ai-tools" class="tab-link active-tab text-center py-4 px-1 text-lg font-bold w-1/3">أدوات الذكاء الاصطناعي</a>
+                    <a href="#" data-tab="general-tools" class="tab-link text-center py-4 px-1 text-lg font-medium w-1/3">الأدوات الأساسية</a>
+                    <a href="#" data-tab="drawing-board" class="tab-link text-center py-4 px-1 text-lg font-medium w-1/3">أستوديو الرسم</a>
+                </nav>
+            </div>
+            <div id="tabs-content">
+                <div id="ai-tools-grid" class="tab-content grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+                <div id="general-tools-grid" class="tab-content hidden grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+            </div>
+        </div>
+        <div id="tool-page" class="page inactive-right">
+            <div class="flex items-center mb-6">
+                <a href="#" id="back-to-home" class="flex items-center gap-2 p-2 rounded-lg hover:bg-[var(--input-bg)] transition-colors">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                    <span>العودة</span>
+                </a>
+                <h2 id="tool-page-title" class="text-3xl font-bold mr-4" style="color: var(--primary-color);"></h2>
+            </div>
+            <div id="tool-page-body" class="p-4 rounded-lg" style="background-color: var(--card-bg);"></div>
+        </div>
+    </main>
+    
+    <scriptscript>
+    // --- APP LOGIC ---
+    const HovaniApp = {
+        elements: {},
+        state: { fabricCanvas: null, currentDrawingTool: 'brush', isDrawingShape: false, shapeStartX: 0, shapeStartY: 0, currentShape: null, undoHistory: [], redoHistory: [], clockInterval: null, stopwatchInterval: null, timerInterval: null, },
+        init() { this.cacheElements(); this.bindEvents(); this.router(); },
+        cacheElements() { this.elements = { body: document.body, themeMenuButton: document.getElementById('theme-menu-button'), themeMenu: document.getElementById('theme-menu'), tabsContainer: document.getElementById('tabs-container'), aiToolsGrid: document.getElementById('ai-tools-grid'), generalToolsGrid: document.getElementById('general-tools-grid'), homePage: document.getElementById('home-page'), toolPage: document.getElementById('tool-page'), toolPageTitle: document.getElementById('tool-page-title'), toolPageBody: document.getElementById('tool-page-body'), homeLink: document.getElementById('home-link'), backToHome: document.getElementById('back-to-home'), }; },
+        bindEvents() {
+            this.elements.themeMenuButton.addEventListener('click', () => this.elements.themeMenu.classList.toggle('hidden'));
+            this.elements.themeMenu.addEventListener('click', (e) => { e.preventDefault(); const theme = e.target.dataset.theme; if (theme) { this.elements.body.className = `antialiased ${theme}`; this.elements.themeMenu.classList.add('hidden'); } });
+            this.elements.tabsContainer.addEventListener('click', (e) => { e.preventDefault(); const tabLink = e.target.closest('.tab-link'); if (tabLink) this.showHomeTab(tabLink.dataset.tab); });
+            const goHome = (e) => { e.preventDefault(); history.pushState({ path: 'home' }, '', '#'); this.router(); };
+            this.elements.homeLink.addEventListener('click', goHome);
+            this.elements.backToHome.addEventListener('click', goHome);
+            window.addEventListener('popstate', () => this.router());
+        },
+        createToolCards() {
+            this.elements.aiToolsGrid.innerHTML = ''; this.elements.generalToolsGrid.innerHTML = '';
+            const createCard = (tool) => {
+                const card = document.createElement('a'); card.href = `#${tool.id}`; card.className = 'tool-card p-6 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 no-underline';
+                card.style.backgroundColor='var(--card-bg)'; card.style.color='var(--primary-color)';
+                card.innerHTML = `<div class="mb-4">${Icons[tool.id] || ''}</div><h3 class="text-xl font-bold mb-2" style="color: var(--text-color);">${tool.name}</h3>`;
+                card.addEventListener('click', (e) => { e.preventDefault(); history.pushState({ path: tool.id }, '', card.href); this.router(); });
+                return card;
+            };
+            Tools.ai.forEach(tool => this.elements.aiToolsGrid.appendChild(createCard(tool)));
+            Tools.general.forEach(tool => this.elements.generalToolsGrid.appendChild(createCard(tool)));
+        },
+        showHomeTab(tabId) {
+            this.elements.tabsContainer.querySelectorAll('.tab-link').forEach(l => {l.classList.remove('active-tab');l.style.color='var(--text-color)';l.style.borderBottom='none'});
+            const activeLink = this.elements.tabsContainer.querySelector(`[data-tab="${tabId}"]`);
+            if (activeLink) { activeLink.classList.add('active-tab'); activeLink.style.color='var(--primary-color)'; activeLink.style.borderBottom='2px solid var(--primary-color)'; }
+            document.querySelectorAll('#tabs-content .tab-content').forEach(c => c.classList.add('hidden'));
+            if(tabId === 'drawing-board') { history.pushState({ path: 'drawing-board' }, '', '#drawing-board'); this.router(); } 
+            else { const grid = document.getElementById(`${tabId}-grid`); if (grid) grid.classList.remove('hidden'); }
+        },
+        router() {
+            const hash = window.location.hash.substring(1);
+            const allTools = [...Tools.ai, ...Tools.general, {id: 'drawing-board', name: 'أستوديو الرسم'}];
+            const tool = allTools.find(t => t.id === hash);
+            clearInterval(this.state.clockInterval); clearInterval(this.state.stopwatchInterval); clearInterval(this.state.timerInterval);
+            if (tool) { this.renderToolPage(tool); } 
+            else {
+                this.elements.homePage.classList.remove('inactive-left'); this.elements.homePage.classList.add('active');
+                this.elements.toolPage.classList.remove('active'); this.elements.toolPage.classList.add('inactive-right');
+                this.createToolCards();
+            }
+        },
+        renderToolPage(tool) {
+            this.elements.homePage.classList.remove('active'); this.elements.homePage.classList.add('inactive-left');
+            this.elements.toolPage.classList.remove('inactive-right'); this.elements.toolPage.classList.add('active');
+            this.elements.toolPageTitle.textContent = tool.name;
+            const implementation = ToolImplementations[tool.id];
+            if (implementation) {
+                this.elements.toolPageBody.innerHTML = implementation.html;
+                setTimeout(() => { try { implementation.logic(); } catch(e) { console.error(`Error initializing tool ${tool.id}:`, e); this.elements.toolPageBody.innerHTML = `<p class="text-red-500">حدث خطأ أثناء تحميل هذه الأداة.</p>` } }, 50);
+            } else {
+                 this.elements.toolPageBody.innerHTML = `<p>لم يتم العثور على هذه الأداة.</p>`;
+            }
+        },
+        initDrawingCanvas() {
+            if (this.state.fabricCanvas) { this.state.fabricCanvas.dispose(); this.state.fabricCanvas = null; }
+            const canvasEl = document.getElementById('drawing-canvas-fabric'); if(!canvasEl) return;
+            const container = canvasEl.parentElement; canvasEl.width = container.clientWidth; canvasEl.height = container.clientHeight > 400 ? container.clientHeight : 500;
+            this.state.fabricCanvas = new fabric.Canvas(canvasEl, { isDrawingMode: true, backgroundColor: '#fff' });
+            this.bindDrawingEvents();
+            this.state.fabricCanvas.freeDrawingBrush.color = document.getElementById('stroke-color').value;
+            this.state.fabricCanvas.freeDrawingBrush.width = parseInt(document.getElementById('stroke-width').value, 10);
+            this.state.undoHistory = []; this.state.redoHistory = []; this.saveCanvasState();
+        },
+        saveCanvasState() { this.state.redoHistory = []; this.state.undoHistory.push(JSON.stringify(this.state.fabricCanvas)); },
+        undo() { if (this.state.undoHistory.length > 1) { const currentState = this.state.undoHistory.pop(); this.state.redoHistory.push(currentState); const prevState = this.state.undoHistory[this.state.undoHistory.length - 1]; this.state.fabricCanvas.loadFromJSON(prevState, () => this.state.fabricCanvas.renderAll()); } },
+        redo() { if (this.state.redoHistory.length > 0) { const redoState = this.state.redoHistory.pop(); this.state.undoHistory.push(redoState); this.state.fabricCanvas.loadFromJSON(redoState, () => this.state.fabricCanvas.renderAll()); } },
+        bindDrawingEvents() {
+             const canvas = this.state.fabricCanvas; if (!canvas) return;
+             document.getElementById('undo-btn').onclick = () => this.undo();
+             document.getElementById('redo-btn').onclick = () => this.redo();
+             document.getElementById('drawing-tools-container').addEventListener('click', e => { const button = e.target.closest('.drawing-tool'); if (!button) return; document.querySelectorAll('#drawing-tools-container .drawing-tool').forEach(b => b.classList.remove('active')); button.classList.add('active'); this.state.currentDrawingTool = button.dataset.tool; canvas.isDrawingMode = (this.state.currentDrawingTool === 'brush'); });
+             document.getElementById('stroke-color').addEventListener('input', e=>{const c=e.target.value;canvas.freeDrawingBrush.color=c;if(canvas.getActiveObject())canvas.getActiveObject().set('stroke',c);canvas.renderAll()});
+             document.getElementById('fill-color').addEventListener('input', e=>{if(canvas.getActiveObject())canvas.getActiveObject().set('fill',e.target.value);canvas.renderAll()});
+             document.getElementById('stroke-width').addEventListener('input', e=>{const w=parseInt(e.target.value,10);canvas.freeDrawingBrush.width=w;if(canvas.getActiveObject())canvas.getActiveObject().set('strokeWidth',w);canvas.renderAll()});
+             document.getElementById('opacity').addEventListener('input', e=>{if(canvas.getActiveObject())canvas.getActiveObject().set('opacity',parseFloat(e.target.value));canvas.renderAll()});
+             document.getElementById('delete-object').addEventListener('click', ()=>{canvas.getActiveObjects().forEach(o=>canvas.remove(o));canvas.discardActiveObject().renderAll(); this.saveCanvasState()});
+             canvas.on('mouse:down', o=>{const t=this.state.currentDrawingTool;if(['brush','select'].includes(t))return;this.state.isDrawingShape=!0;const p=canvas.getPointer(o.e);this.state.shapeStartX=p.x;this.state.shapeStartY=p.y;const sC=document.getElementById('stroke-color').value,fC=document.getElementById('fill-color').value,sW=parseInt(document.getElementById('stroke-width').value,10);let sh;if(t==='rect')sh=new fabric.Rect({left:p.x,top:p.y,width:0,height:0,stroke:sC,fill:fC,strokeWidth:sW});else if(t==='circle')sh=new fabric.Circle({left:p.x,top:p.y,radius:0,stroke:sC,fill:fC,strokeWidth:sW});else if(t==='line')sh=new fabric.Line([p.x,p.y,p.x,p.y],{stroke:sC,strokeWidth:sW});else if(t==='text')sh=new fabric.IText('اكتب هنا',{left:p.x,top:p.y,fill:sC,fontSize:30,fontFamily:'Cairo'});if(sh){this.state.currentShape=sh;canvas.add(this.state.currentShape);if(t==='text'){this.state.isDrawingShape=!1;this.state.currentShape=null;canvas.setActiveObject(sh);document.querySelector('[data-tool="select"]').click()}}});
+             canvas.on('mouse:move', o=>{if(!this.state.isDrawingShape||!this.state.currentShape)return;const p=canvas.getPointer(o.e),sh=this.state.currentShape,sX=this.state.shapeStartX,sY=this.state.shapeStartY;if(sh.type==='rect')sh.set({width:Math.abs(p.x-sX),height:Math.abs(p.y-sY),left:p.x>sX?sX:p.x,top:p.y>sY?sY:p.y});else if(sh.type==='circle'){const r=Math.sqrt(Math.pow(p.x-sX,2)+Math.pow(p.y-sY,2))/2;sh.set({radius:r,left:sX-r,top:sY-r})}else if(sh.type==='line')sh.set({x2:p.x,y2:p.y});canvas.renderAll()});
+             canvas.on('mouse:up', ()=>{if(this.state.currentShape)this.state.currentShape.setCoords();this.state.isDrawingShape=!1;this.state.currentShape=null;this.saveCanvasState()});
+        },
+    };
+    
+    // --- API HELPERS ---
+    const callGemini=async(p)=>{const b={contents:[{role:"user",parts:[{text:p}]}]},k="",u=`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${k}`,r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});if(!r.ok)throw new Error(r.statusText);const d=await r.json();if(d.candidates&&d.candidates[0])return d.candidates[0].content.parts[0].text;throw new Error('No content')};
+    const callImagen=async(p)=>{const b={instances:[{prompt:p}],parameters:{"sampleCount":1}},k="",u=`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${k}`,r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});if(!r.ok)throw new Error(r.statusText);const d=await r.json();if(d.predictions&&d.predictions[0])return`data:image/png;base64,${d
