@@ -96,7 +96,7 @@
             </div>
             <div id="tool-page-body" class="p-4 rounded-lg" style="background-color: var(--card-bg);"></div>
         </div>
-    </main>
+    </mainmain>
     
     <script>
     // --- APP LOGIC ---
@@ -173,8 +173,8 @@
         redo() { if (this.state.redoHistory.length > 0) { const redoState = this.state.redoHistory.pop(); this.state.undoHistory.push(redoState); this.state.fabricCanvas.loadFromJSON(redoState, () => this.state.fabricCanvas.renderAll()); } },
         bindDrawingEvents() {
              const canvas = this.state.fabricCanvas; if (!canvas) return;
-             document.getElementById('undo-btn').onclick = () => this.undo();
-             document.getElementById('redo-btn').onclick = () => this.redo();
+             document.getElementById('undo-btn').addEventListener('click', () => this.undo());
+             document.getElementById('redo-btn').addEventListener('click', () => this.redo());
              document.getElementById('drawing-tools-container').addEventListener('click', e => { const button = e.target.closest('.drawing-tool'); if (!button) return; document.querySelectorAll('#drawing-tools-container .drawing-tool').forEach(b => b.classList.remove('active')); button.classList.add('active'); this.state.currentDrawingTool = button.dataset.tool; canvas.isDrawingMode = (this.state.currentDrawingTool === 'brush'); });
              document.getElementById('stroke-color').addEventListener('input', e=>{const c=e.target.value;canvas.freeDrawingBrush.color=c;if(canvas.getActiveObject())canvas.getActiveObject().set('stroke',c);canvas.renderAll()});
              document.getElementById('fill-color').addEventListener('input', e=>{if(canvas.getActiveObject())canvas.getActiveObject().set('fill',e.target.value);canvas.renderAll()});
@@ -189,4 +189,4 @@
     
     // --- API HELPERS ---
     const callGemini=async(p)=>{const b={contents:[{role:"user",parts:[{text:p}]}]},k="",u=`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${k}`,r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});if(!r.ok)throw new Error(r.statusText);const d=await r.json();if(d.candidates&&d.candidates[0])return d.candidates[0].content.parts[0].text;throw new Error('No content')};
-    const callImagen=async(p)=>{const b={instances:[{prompt:p}],parameters:{"sampleCount":1}},k="",u=`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${k}`,r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});if(!r.ok)throw new Error(r.statusText);const d=await r.json();if(d.predictions&&d.pr
+    const callImagen=async(p)=>{const b={instances:[{prompt:p}],parameters:{"sampleCount":1}},k="",u=`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${k}`,r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});if(!r.ok)throw new Error(r.statusText);const d
