@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <h1>Welcome to Our Chat App</h1>
+    <p>Loading...</p>
+
+    <!-- This is where chat messages will appear -->
+    <div id="chat-window">
+        <ul id="messages"></ul>
+    </div>
+
+    <!-- Form for sending messages -->
+    <form id="message-form" action="">
+        <input id="message-input" autocomplete="off" /><button>Send</button>
+    </form>
+
+    <!-- Placeholder for user list -->
+    <div id="user-list">
+        <h2>Users</h2>
+        <ul id="users"></ul>
+    </div>
+
+    <!-- Placeholder for login/registration forms (to be implemented) -->
+    <div id="auth-forms">
+        <h2>Login / Register</h2>
+        <p>(Login and registration forms will go here)</p>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
