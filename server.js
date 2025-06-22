@@ -3,9 +3,13 @@ const express = require('express');
 const socketio = require('socket.io');
 const path = require('path');
 const dotenv = require('dotenv');
+const connectDB = require('./src/config/db');
 
 // Load environment variables
-dotenv.config();
+dotenv.config(); // Ensures .env is loaded
+
+// Connect to MongoDB
+connectDB();
 
 const app = express();
 const server = http.createServer(app);
@@ -18,10 +22,16 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Basic route for testing
-app.get('/', (req, res) => {
-    // This will be replaced by serving index.html from public
-    res.send('Chat Server Up and Running');
-});
+// app.get('/', (req, res) => {
+//     // This will be replaced by serving index.html from public
+//     res.send('Chat Server Up and Running');
+// });
+
+// API Routes
+app.use('/api/auth', require('./src/routes/authRoutes'));
+// Future: app.use('/api/users', require('./src/routes/userRoutes'));
+// Future: app.use('/api/messages', require('./src/routes/messageRoutes'));
+
 
 // Socket.io connection handling (very basic for now)
 io.on('connection', (socket) => {
