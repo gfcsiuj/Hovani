@@ -57,22 +57,65 @@
                 </div>
             </div>
 
-            <div id="chat-container" style="display:none;">
-                <h2>Welcome to the Chat!</h2>
-                <!-- This is where chat messages will appear -->
-                <div id="chat-window">
-                    <ul id="messages"></ul>
-                </div>
+            <div id="chat-container" style="display:none; height: calc(100vh - 120px);"> <!-- Adjust height as needed -->
+                <div class="chat-layout">
+                    <!-- Left Column: User/Conversation List -->
+                    <aside id="conversation-list-container">
+                        <header id="conversation-list-header">
+                            <input type="search" placeholder="Search or start new chat" id="conversation-search">
+                        </header>
+                        <ul id="conversation-list">
+                            <!-- Placeholder items will be added in next step -->
+                            <li class="conversation-item active-conversation">
+                                <img src="https://via.placeholder.com/40?text=U1" alt="User 1" class="avatar">
+                                <div class="conversation-details">
+                                    <p class="conversation-name">User One</p>
+                                    <p class="conversation-snippet">Hey, how are you?</p>
+                                </div>
+                                <span class="conversation-timestamp">10:30 AM</span>
+                            </li>
+                            <li class="conversation-item">
+                                <img src="https://via.placeholder.com/40?text=U2" alt="User 2" class="avatar">
+                                <div class="conversation-details">
+                                    <p class="conversation-name">Another User</p>
+                                    <p class="conversation-snippet">See you later!</p>
+                                </div>
+                                <span class="conversation-timestamp">Yesterday</span>
+                            </li>
+                        </ul>
+                    </aside>
 
-                <!-- Form for sending messages -->
-                <form id="message-form" action="">
-                    <input id="message-input" autocomplete="off" placeholder="Type your message..." /><button type="submit">Send</button>
-                </form>
+                    <!-- Right Column: Active Chat Window -->
+                    <section id="active-chat-container">
+                        <header id="active-chat-header">
+                            <img src="https://via.placeholder.com/40?text=U1" alt="Current Chat User" class="avatar" id="current-chat-avatar">
+                            <div>
+                                <h2 id="current-chat-username">User One</h2>
+                                <p id="current-chat-status">Online</p> <!-- Placeholder -->
+                            </div>
+                            <!-- More actions can go here e.g., call, info -->
+                        </header>
 
-                <!-- Placeholder for user list -->
-                <div id="user-list">
-                    <h3>Online Users</h3>
-                    <ul id="users"></ul>
+                        <div id="chat-window"> <!-- Message display area -->
+                            <ul id="messages">
+                                <!-- Placeholder messages will be styled in next step -->
+                                <li class="message-item message-received">
+                                    <div class="message-content">Hello! How are you doing today?</div>
+                                    <span class="message-timestamp">10:28 AM</span>
+                                </li>
+                                <li class="message-item message-sent">
+                                    <div class="message-content">I'm good, thanks for asking! Just working on this chat app.</div>
+                                    <span class="message-timestamp">10:30 AM</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <form id="message-form"> <!-- Message input area -->
+                            <button type="button" id="attachment-button" aria-label="Attach file">📎</button>
+                            <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+                            <button type="submit" id="send-button" aria-label="Send message">➡️</button>
+                        </form>
+                    </section>
                 </div>
             </div>
         </main>
