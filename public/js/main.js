@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 displayFeedback(loginFeedback, 'Email and password are required.', false);
                 return;
             }
-            await handleAuthRequest('/api/auth/login', { email, password }, loginFeedback);
+            await handleAuthRequest('/.netlify/functions/login', { email, password }, loginFeedback);
         });
     }
 
@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 displayFeedback(registerFeedback, 'Username, email, and password are required.', false);
                 return;
             }
-            await handleAuthRequest('/api/auth/register', { username, email, password }, registerFeedback);
+            await handleAuthRequest('/.netlify/functions/register', { username, email, password }, registerFeedback);
         });
     }
 

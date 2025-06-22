@@ -28,7 +28,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // });
 
 // API Routes
-app.use('/api/auth', require('./src/routes/authRoutes'));
+// app.use('/api/auth', require('./src/routes/authRoutes')); // Removed as auth is now via Netlify Functions
 // Future: app.use('/api/users', require('./src/routes/userRoutes'));
 // Future: app.use('/api/messages', require('./src/routes/messageRoutes'));
 
