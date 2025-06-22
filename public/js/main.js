@@ -31,7 +31,91 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageForm = document.getElementById('message-form');
     const messageInput = document.getElementById('message-input');
     const messagesList = document.getElementById('messages');
-    // const usersList = document.getElementById('users');
+    // const usersList = document.getElementById('users'); // This is the old one, new is conversation-list
+    const conversationList = document.getElementById('conversation-list');
+    const currentChatUsername = document.getElementById('current-chat-username');
+    const currentChatAvatar = document.getElementById('current-chat-avatar');
+    const currentChatStatus = document.getElementById('current-chat-status');
+
+
+    // --- Mock Data ---
+    const mockConversations = {
+        "User One": {
+            avatar: "https://via.placeholder.com/40?text=U1",
+            status: "Online",
+            messages: [
+                { sender: "User One", text: "Hey, how are you?", time: "10:28 AM", type: "received" },
+                { sender: "You", text: "I'm good, thanks! Working on this.", time: "10:30 AM", type: "sent" },
+                { sender: "User One", text: "Cool! Let me know if you need help.", time: "10:31 AM", type: "received" }
+            ]
+        },
+        "Another User": {
+            avatar: "https://via.placeholder.com/40?text=U2",
+            status: "Offline",
+            messages: [
+                { sender: "Another User", text: "Lunch tomorrow?", time: "Yesterday", type: "received" },
+                { sender: "You", text: "Sure, sounds good!", time: "Yesterday", type: "sent" }
+            ]
+        },
+        "User Three": {
+            avatar: "https://via.placeholder.com/40?text=U3",
+            status: "Online",
+            messages: [
+                { sender: "User Three", text: "Did you see the new designs?", time: "Mon", type: "received" }
+            ]
+        }
+    };
+
+    function populateConversationList() {
+        if (!conversationList) return;
+        conversationList.innerHTML = ''; // Clear existing
+        Object.keys(mockConversations).forEach((username, index) => {
+            const convoData = mockConversations[username];
+            const lastMessage = convoData.messages.length > 0 ? convoData.messages[convoData.messages.length - 1] : { text: "No messages yet", time: "" };
+
+            const listItem = document.createElement('li');
+            listItem.className = 'conversation-item';
+            if (index === 0) listItem.classList.add('active-conversation'); // Make first active by default
+            listItem.dataset.username = username; // Store username for click handling
+
+            listItem.innerHTML = `
+                <img src="${convoData.avatar}" alt="${username}" class="avatar">
+                <div class="conversation-details">
+                    <p class="conversation-name">${username}</p>
+                    <p class="conversation-snippet">${lastMessage.text}</p>
+                </div>
+                <span class="conversation-timestamp">${lastMessage.time}</span>
+            `;
+            listItem.addEventListener('click', () => selectConversation(username, listItem));
+            conversationList.appendChild(listItem);
+        });
+        // Load the first conversation by default if list is not empty
+        if (Object.keys(mockConversations).length > 0) {
+            selectConversation(Object.keys(mockConversations)[0], conversationList.querySelector('.conversation-item'));
+        }
+    }
+
+    function selectConversation(username, selectedListItem) {
+        if (!mockConversations[username]) return;
+
+        const convoData = mockConversations[username];
+        currentChatUsername.textContent = username;
+        currentChatAvatar.src = convoData.avatar;
+        currentChatStatus.textContent = convoData.status;
+
+        messagesList.innerHTML = ''; // Clear previous messages
+        convoData.messages.forEach(msg => {
+            appendMessageToList(msg.text, msg.type, msg.sender, msg.time);
+        });
+
+        // Update active state in conversation list
+        const allConvoItems = conversationList.querySelectorAll('.conversation-item');
+        allConvoItems.forEach(item => item.classList.remove('active-conversation'));
+        if (selectedListItem) {
+            selectedListItem.classList.add('active-conversation');
+        }
+    }
+
 
     // --- Utility Functions ---
     function displayFeedback(element, message, isSuccess) {
@@ -105,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 displayFeedback(loginFeedback, 'Email and password are required.', false);
                 return;
             }
-            await handleAuthRequest('/api/auth/login', { email, password }, loginFeedback);
+            await handleAuthRequest('/.netlify/functions/login', { email, password }, loginFeedback);
         });
     }
 
@@ -119,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 displayFeedback(registerFeedback, 'Username, email, and password are required.', false);
                 return;
             }
-            await handleAuthRequest('/api/auth/register', { username, email, password }, registerFeedback);
+            await handleAuthRequest('/.netlify/functions/register', { username, email, password }, registerFeedback);
         });
     }
 
@@ -146,6 +230,11 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             updateAuthUI(false);
+            if (conversationList) conversationList.innerHTML = ''; // Clear conversation list on logout
+            if (messagesList) messagesList.innerHTML = ''; // Clear messages on logout
+            if (currentChatUsername) currentChatUsername.textContent = '';
+            if (currentChatAvatar) currentChatAvatar.src = 'https://via.placeholder.com/40';
+            if (currentChatStatus) currentChatStatus.textContent = '';
             // Optionally, inform the server about logout if needed
         });
     }
@@ -172,13 +261,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         socket.on('connect', () => {
             console.log('Socket connected successfully with ID:', socket.id);
-            appendMessageToList('Connected to chat!', 'system');
+            appendMessageToListHelper('Connected to chat!', 'system');
             // You can now emit events that require authentication
         });
 
         socket.on('connect_error', (err) => {
             console.error('Socket connection error:', err.message);
-            appendMessageToList(`Connection Error: ${err.message}. Try refreshing.`, 'error');
+            appendMessageToListHelper(`Connection Error: ${err.message}. Try refreshing.`, 'error');
             // Handle auth errors, e.g., invalid token
             if (err.message === 'Invalid token' || err.message === 'Authentication error') {
                 localStorage.removeItem('token');
@@ -189,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         socket.on('disconnect', (reason) => {
             console.log('Socket disconnected:', reason);
-            appendMessageToList(`Disconnected: ${reason}`, 'system');
+            appendMessageToListHelper(`Disconnected: ${reason}`, 'system');
             // If disconnected due to server-side auth error, could also trigger logout
             if (reason === 'io server disconnect') { // Often due to auth failure mid-session
                  // Consider if re-authentication or UI update is needed
@@ -199,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Example: Handle incoming chat messages (to be implemented fully later)
         socket.on('chat message', (msgData) => {
             // msgData might be { user: 'username', text: 'message content', timestamp: ... }
-            appendMessageToList(`${msgData.user}: ${msgData.text}`, 'chat');
+            appendMessageToListHelper(msgData.text, msgData.type || 'chat', msgData.user, msgData.time);
         });
     }
 
@@ -207,29 +296,66 @@ document.addEventListener('DOMContentLoaded', () => {
     if (messageForm) {
         messageForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            if (messageInput.value.trim() && socket && socket.connected) {
-                const messageText = messageInput.value.trim();
-                // Emit message to server (to be implemented on server)
-                socket.emit('chat message', { text: messageText });
-
-                // Optimistically display sent message (server should confirm/broadcast)
-                // appendMessageToList(`You: ${messageText}`, 'user');
+            const messageText = messageInput.value.trim();
+            if (messageText) {
+                if (socket && socket.connected) {
+                    // Emit message to server (to be implemented on server)
+                    // For now, we'll just add it to the mock data for the current conversation
+                    // and re-render. In a real app, server would send it back.
+                    const currentConvoUsername = currentChatUsername.textContent;
+                    if (mockConversations[currentConvoUsername]) {
+                        const newMsg = {
+                            sender: "You",
+                            text: messageText,
+                            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                            type: "sent"
+                        };
+                        mockConversations[currentConvoUsername].messages.push(newMsg);
+                        // append this new message to the UI directly
+                        appendMessageToList(newMsg.text, newMsg.type, newMsg.sender, newMsg.time);
+                    }
+                } else {
+                     // If socket not connected, still add to UI for local demo feel
+                    appendMessageToList(messageText, "sent", "You", new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+                    // appendMessageToListHelper('Not connected. Message shown locally.', 'error');
+                }
                 messageInput.value = '';
-            } else if (!socket || !socket.connected) {
-                appendMessageToList('Not connected to chat. Cannot send message.', 'error');
             }
         });
     }
 
-    function appendMessageToList(text, type = 'chat') { // type can be 'chat', 'system', 'error', 'user'
+    function appendMessageToList(text, type = 'chat', sender = '', time = '') {
+        if (!messagesList) return;
         const listItem = document.createElement('li');
-        listItem.textContent = text;
-        if (type === 'system') listItem.style.fontStyle = 'italic';
-        if (type === 'error') listItem.style.color = 'red';
-        // if (type === 'user') listItem.style.textAlign = 'right'; // Example for user's own messages
+        listItem.classList.add('message-item');
+        if (type === 'sent') {
+            listItem.classList.add('message-sent');
+        } else {
+            listItem.classList.add('message-received');
+        }
+
+        listItem.innerHTML = `
+            <div class="message-content">${text}</div>
+            <span class="message-timestamp">${time}</span>
+        `;
         messagesList.appendChild(listItem);
         scrollToBottom();
     }
+
+    // Wrapper for system/error messages that don't have sender/time in the same way
+    function appendMessageToListHelper(text, type = 'system') {
+        if (!messagesList) return;
+        const listItem = document.createElement('li');
+        listItem.textContent = text;
+        if (type === 'system') listItem.style.fontStyle = 'italic';
+        if (type === 'error') {
+            listItem.style.color = 'red';
+            listItem.style.textAlign = 'center';
+        }
+        messagesList.appendChild(listItem);
+        scrollToBottom();
+    }
+
 
     function scrollToBottom() {
         const chatWindow = document.getElementById('chat-window');
