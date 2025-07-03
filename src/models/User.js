@@ -2,50 +2,49 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const UserSchema = new mongoose.Schema({
-    username: {
+    userId: { // New field for the 8-digit ID
+        type: String,
+        required: [true, 'User ID is required'],
+        unique: true,
+        trim: true,
+        // Potentially add a regex match for format '90xxxxxx' if needed
+        // match: [/^90\d{6}$/, 'User ID must be in the format 90xxxxxx']
+    },
+    username: { // This will now be the display name
         type: String,
         required: [true, 'Username is required'],
-        unique: true,
+        // unique: true, // Username (display name) might not need to be unique if userId is the primary identifier
         trim: true,
         minlength: [3, 'Username must be at least 3 characters long'],
         maxlength: [30, 'Username cannot exceed 30 characters']
-    },
-    email: {
-        type: String,
-        required: [true, 'Email is required'],
-        unique: true,
-        trim: true,
-        lowercase: true,
-        match: [
-            /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-            'Please fill a valid email address'
-        ]
     },
     password: {
         type: String,
         required: [true, 'Password is required'],
         minlength: [6, 'Password must be at least 6 characters long']
-        // Consider adding maxlength or other password policies if needed
+    },
+    profilePicture: { // New field for profile picture URL
+        type: String,
+        trim: true,
+        default: '' // Default to an empty string or a placeholder URL
     },
     createdAt: {
         type: Date,
         default: Date.now
     }
-    // We can add more fields later, e.g., profilePicture, status, lastSeen, etc.
 });
 
 // Pre-save middleware to hash password before saving
 UserSchema.pre('save', async function(next) {
-    // Only hash the password if it has been modified (or is new)
     if (!this.isModified('password')) {
         return next();
     }
     try {
-        const salt = await bcrypt.genSalt(10); // 10 rounds is generally recommended
+        const salt = await bcrypt.genSalt(10);
         this.password = await bcrypt.hash(this.password, salt);
         next();
     } catch (error) {
-        next(error); // Pass error to the next middleware/error handler
+        next(error);
     }
 });
 
@@ -54,13 +53,12 @@ UserSchema.methods.comparePassword = async function(enteredPassword) {
     try {
         return await bcrypt.compare(enteredPassword, this.password);
     } catch (error) {
-        throw error; // Or handle error as appropriate
+        throw error;
     }
 };
 
-// Consider adding indexes for fields frequently queried, e.g., username, email
-UserSchema.index({ username: 1 });
-UserSchema.index({ email: 1 });
+UserSchema.index({ userId: 1 }); // Index for the new userId field
+UserSchema.index({ username: 1 }); // Keep index on username if it's frequently searched
 
 const User = mongoose.model('User', UserSchema);
 

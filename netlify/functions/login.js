@@ -1,14 +1,12 @@
-const dotenv = require('dotenv'); // For JWT_SECRET if not set by Netlify build/env
+const dotenv = require('dotenv');
 const connectToDatabase = require('./_utils/db');
-const User = require('../../src/models/User'); // Adjust path as necessary
+const User = require('../../src/models/User');
 const jwt = require('jsonwebtoken');
 
-// Load .env variables for local development (netlify dev)
 if (process.env.NODE_ENV !== 'production') {
-  dotenv.config({ path: '../../../.env' });
+  dotenv.config({ path: require('path').resolve(__dirname, '../../../.env') });
 }
 
-// Utility to generate JWT - ensure JWT_SECRET and JWT_EXPIRES_IN are available
 const generateToken = (id) => {
   if (!process.env.JWT_SECRET) {
     console.error("FATAL ERROR: JWT_SECRET is not defined. Cannot generate token.");
@@ -29,19 +27,19 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const { email, password } = JSON.parse(event.body);
+    const { userId, password } = JSON.parse(event.body); // Changed from email to userId
 
-    if (!email || !password) {
+    if (!userId || !password) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ message: 'Please provide email and password' }),
+        body: JSON.stringify({ message: 'Please provide User ID and password' }), // Updated message
         headers: { 'Content-Type': 'application/json' },
       };
     }
 
     await connectToDatabase();
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ userId }); // Find user by userId
     if (!user) {
       return {
         statusCode: 401,
@@ -50,7 +48,7 @@ exports.handler = async (event, context) => {
       };
     }
 
-    const isMatch = await user.comparePassword(password); // Uses method from User model
+    const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return {
         statusCode: 401,
@@ -59,7 +57,7 @@ exports.handler = async (event, context) => {
       };
     }
 
-    const token = generateToken(user._id);
+    const token = generateToken(user._id); // Still using MongoDB's _id for JWT
 
     return {
       statusCode: 200,
@@ -67,9 +65,10 @@ exports.handler = async (event, context) => {
         message: 'User logged in successfully',
         token,
         user: {
-          id: user._id,
+          id: user._id, // Mongo's internal ID
+          userId: user.userId, // The 8-digit ID
           username: user.username,
-          email: user.email,
+          profilePicture: user.profilePicture,
         },
       }),
       headers: { 'Content-Type': 'application/json' },

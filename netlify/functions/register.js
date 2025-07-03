@@ -1,19 +1,15 @@
-const dotenv = require('dotenv'); // For JWT_SECRET if not set by Netlify build/env
+const dotenv = require('dotenv');
 const connectToDatabase = require('./_utils/db');
-const User = require('../../src/models/User'); // Adjust path as necessary
+const User = require('../../src/models/User');
 const jwt = require('jsonwebtoken');
 
-// Load .env variables for local development (netlify dev)
-// In production, Netlify environment variables should be used.
 if (process.env.NODE_ENV !== 'production') {
-  dotenv.config({ path: '../../../.env' });
+  dotenv.config({ path: require('path').resolve(__dirname, '../../../.env') });
 }
 
-// Utility to generate JWT - ensure JWT_SECRET and JWT_EXPIRES_IN are available
 const generateToken = (id) => {
   if (!process.env.JWT_SECRET) {
     console.error("FATAL ERROR: JWT_SECRET is not defined. Cannot generate token.");
-    // This should ideally not happen if environment variables are set up correctly.
     throw new Error("Server configuration error: JWT_SECRET not found.");
   }
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -21,8 +17,22 @@ const generateToken = (id) => {
   });
 };
 
+// Function to generate a unique 8-digit user ID
+const generateUniqueUserID = async () => {
+  let userID;
+  let isUnique = false;
+  while (!isUnique) {
+    const randomPart = Math.floor(100000 + Math.random() * 900000).toString(); // 6 random digits
+    userID = `90${randomPart}`;
+    const existingUser = await User.findOne({ userId: userID });
+    if (!existingUser) {
+      isUnique = true;
+    }
+  }
+  return userID;
+};
+
 exports.handler = async (event, context) => {
-  // Ensure we only handle POST requests
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
@@ -32,35 +42,42 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const { username, email, password } = JSON.parse(event.body);
+    const { username, password, profilePicture } = JSON.parse(event.body);
 
-    if (!username || !email || !password) {
+    if (!username || !password) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ message: 'Please provide username, email, and password' }),
+        body: JSON.stringify({ message: 'Please provide username and password' }),
         headers: { 'Content-Type': 'application/json' },
       };
     }
 
-    // Connect to DB
     await connectToDatabase();
 
-    let user = await User.findOne({ $or: [{ email }, { username }] });
-    if (user) {
-      let message = 'User already exists.';
-      if (user.email === email) message = `User already exists with email: ${email}`;
-      if (user.username === username) message = `User alreadyexists with username: ${username}`;
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ message }),
-        headers: { 'Content-Type': 'application/json' },
-      };
-    }
+    // Check if username (display name) is already taken, if you want it to be unique.
+    // For this implementation, we assume username (display name) does not need to be unique,
+    // as `userId` is the primary unique identifier.
+    // If username needs to be unique, add:
+    // const existingUsername = await User.findOne({ username });
+    // if (existingUsername) {
+    //   return {
+    //     statusCode: 400,
+    //     body: JSON.stringify({ message: `Username '${username}' is already taken.` }),
+    //     headers: { 'Content-Type': 'application/json' },
+    //   };
+    // }
 
-    user = new User({ username, email, password });
-    await user.save(); // Password hashing is handled by pre-save hook in User model
+    const userId = await generateUniqueUserID();
 
-    const token = generateToken(user._id);
+    const user = new User({
+      userId,
+      username,
+      password,
+      profilePicture: profilePicture || '', // Use provided URL or default to empty
+    });
+    await user.save();
+
+    const token = generateToken(user._id); // Still using MongoDB's _id for JWT internal reference
 
     return {
       statusCode: 201,
@@ -68,9 +85,10 @@ exports.handler = async (event, context) => {
         message: 'User registered successfully',
         token,
         user: {
-          id: user._id,
+          id: user._id, // Mongo's internal ID
+          userId: user.userId, // The new 8-digit ID
           username: user.username,
-          email: user.email,
+          profilePicture: user.profilePicture,
         },
       }),
       headers: { 'Content-Type': 'application/json' },
@@ -85,9 +103,12 @@ exports.handler = async (event, context) => {
       statusCode = 400;
       message = Object.values(error.errors).map(val => val.message).join(', ');
     } else if (error.message.includes("JWT_SECRET")) {
-        // Specific error for JWT secret not being found
         message = "Server configuration error: Could not generate token.";
+    } else if (error.code === 11000 && error.keyPattern && error.keyPattern.userId) { // Handle duplicate userId, though generateUniqueUserID should prevent this
+        statusCode = 500; // Should be rare, indicates an issue with ID generation or race condition
+        message = "Failed to generate a unique User ID. Please try again.";
     }
+
 
     return {
       statusCode,

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat App</title>
+    <title>Chat App - Neon Edition</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -22,8 +22,8 @@
                     <h2>Login</h2>
                     <form id="login-form">
                         <div>
-                            <label for="login-email">Email:</label>
-                            <input type="email" id="login-email" name="email" required>
+                            <label for="login-userid">User ID:</label>
+                            <input type="text" id="login-userid" name="userid" required pattern="^90\d{6}$" title="User ID must be 8 digits starting with 90.">
                         </div>
                         <div>
                             <label for="login-password">Password:</label>
@@ -39,17 +39,18 @@
                     <h2>Register</h2>
                     <form id="register-form">
                         <div>
-                            <label for="register-username">Username:</label>
+                            <label for="register-username">Username (Display Name):</label>
                             <input type="text" id="register-username" name="username" required>
                         </div>
                         <div>
-                            <label for="register-email">Email:</label>
-                            <input type="email" id="register-email" name="email" required>
+                            <label for="register-password">Password:</label>
+                            <input type="password" id="register-password" name="password" required minlength="6">
                         </div>
                         <div>
-                            <label for="register-password">Password:</label>
-                            <input type="password" id="register-password" name="password" required>
+                            <label for="register-profile-picture">Profile Picture URL (Optional):</label>
+                            <input type="url" id="register-profile-picture" name="profilePicture" placeholder="https://example.com/image.png">
                         </div>
+                        <p>Your unique 8-digit User ID will be generated upon successful registration.</p>
                         <button type="submit">Register</button>
                         <p class="auth-feedback" id="register-feedback"></p>
                     </form>
