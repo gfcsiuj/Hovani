@@ -5,11 +5,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auth form elements
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
-    const loginEmailInput = document.getElementById('login-email');
+    const loginUserIdInput = document.getElementById('login-userid'); // Changed from login-email
     const loginPasswordInput = document.getElementById('login-password');
     const registerUsernameInput = document.getElementById('register-username');
-    const registerEmailInput = document.getElementById('register-email');
     const registerPasswordInput = document.getElementById('register-password');
+    const registerProfilePictureInput = document.getElementById('register-profile-picture'); // New input
     const loginFeedback = document.getElementById('login-feedback');
     const registerFeedback = document.getElementById('register-feedback');
 
@@ -27,18 +27,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const usernameDisplay = document.getElementById('username-display');
     const logoutButton = document.getElementById('logout-button');
 
-    // Chat elements (will be used more later)
+    // Chat elements
     const messageForm = document.getElementById('message-form');
     const messageInput = document.getElementById('message-input');
     const messagesList = document.getElementById('messages');
-    // const usersList = document.getElementById('users'); // This is the old one, new is conversation-list
     const conversationList = document.getElementById('conversation-list');
     const currentChatUsername = document.getElementById('current-chat-username');
     const currentChatAvatar = document.getElementById('current-chat-avatar');
     const currentChatStatus = document.getElementById('current-chat-status');
 
 
-    // --- Mock Data ---
+    // --- Mock Data (Can be removed or updated as real data flows) ---
     const mockConversations = {
         "User One": {
             avatar: "https://via.placeholder.com/40?text=U1",
@@ -56,27 +55,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 { sender: "Another User", text: "Lunch tomorrow?", time: "Yesterday", type: "received" },
                 { sender: "You", text: "Sure, sounds good!", time: "Yesterday", type: "sent" }
             ]
-        },
-        "User Three": {
-            avatar: "https://via.placeholder.com/40?text=U3",
-            status: "Online",
-            messages: [
-                { sender: "User Three", text: "Did you see the new designs?", time: "Mon", type: "received" }
-            ]
         }
     };
 
     function populateConversationList() {
         if (!conversationList) return;
-        conversationList.innerHTML = ''; // Clear existing
+        conversationList.innerHTML = '';
+        const user = JSON.parse(localStorage.getItem('user'));
+        // In a real app, this list would come from the server based on the logged-in user
         Object.keys(mockConversations).forEach((username, index) => {
             const convoData = mockConversations[username];
             const lastMessage = convoData.messages.length > 0 ? convoData.messages[convoData.messages.length - 1] : { text: "No messages yet", time: "" };
 
             const listItem = document.createElement('li');
             listItem.className = 'conversation-item';
-            if (index === 0) listItem.classList.add('active-conversation'); // Make first active by default
-            listItem.dataset.username = username; // Store username for click handling
+            if (index === 0) listItem.classList.add('active-conversation');
+            listItem.dataset.username = username;
 
             listItem.innerHTML = `
                 <img src="${convoData.avatar}" alt="${username}" class="avatar">
@@ -89,7 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
             listItem.addEventListener('click', () => selectConversation(username, listItem));
             conversationList.appendChild(listItem);
         });
-        // Load the first conversation by default if list is not empty
         if (Object.keys(mockConversations).length > 0) {
             selectConversation(Object.keys(mockConversations)[0], conversationList.querySelector('.conversation-item'));
         }
@@ -100,22 +93,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const convoData = mockConversations[username];
         currentChatUsername.textContent = username;
-        currentChatAvatar.src = convoData.avatar;
+        currentChatAvatar.src = convoData.avatar; // Update with actual user avatar later
         currentChatStatus.textContent = convoData.status;
 
-        messagesList.innerHTML = ''; // Clear previous messages
+        messagesList.innerHTML = '';
         convoData.messages.forEach(msg => {
             appendMessageToList(msg.text, msg.type, msg.sender, msg.time);
         });
 
-        // Update active state in conversation list
         const allConvoItems = conversationList.querySelectorAll('.conversation-item');
         allConvoItems.forEach(item => item.classList.remove('active-conversation'));
         if (selectedListItem) {
             selectedListItem.classList.add('active-conversation');
         }
     }
-
 
     // --- Utility Functions ---
     function displayFeedback(element, message, isSuccess) {
@@ -133,14 +124,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateAuthUI(isLoggedIn, user = null) {
-        if (isLoggedIn) {
+        if (isLoggedIn && user) {
             authContainer.style.display = 'none';
-            chatContainer.style.display = 'block'; // Or 'flex' if it's a flex container
-            usernameDisplay.textContent = `Logged in as: ${user.username}`;
+            chatContainer.style.display = 'block';
+            usernameDisplay.textContent = `Logged in as: ${user.username} (ID: ${user.userId})`; // Display username and User ID
             logoutButton.style.display = 'inline';
-            initializeSocket(); // Initialize socket connection after login
+            // Populate mock conversations for now. Later, this would fetch user's actual conversations.
+            populateConversationList();
+            initializeSocket();
         } else {
-            authContainer.style.display = 'block'; // Or 'flex'
+            authContainer.style.display = 'block';
             chatContainer.style.display = 'none';
             usernameDisplay.textContent = 'Not logged in';
             logoutButton.style.display = 'none';
@@ -151,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- API Call Functions ---
-    async function handleAuthRequest(url, body, feedbackElement) {
+    async function handleAuthRequest(url, body, feedbackElement, isRegister = false) {
         clearFeedback(loginFeedback, registerFeedback);
         try {
             const response = await fetch(url, {
@@ -166,10 +159,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 return null;
             }
 
-            displayFeedback(feedbackElement, data.message || 'Success!', true);
-            localStorage.setItem('token', data.token); // Store JWT
-            localStorage.setItem('user', JSON.stringify(data.user)); // Store user info
-            updateAuthUI(true, data.user);
+            let successMessage = data.message || 'Success!';
+            if (isRegister && data.user && data.user.userId) {
+                successMessage += ` Your User ID is: ${data.user.userId}. Please save it for login.`;
+            }
+            displayFeedback(feedbackElement, successMessage, true);
+
+            if (!isRegister) { // For login, store token and user, then update UI
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                updateAuthUI(true, data.user);
+            } else {
+                // For registration, after showing success, maybe clear form or switch to login
+                registerForm.reset(); // Clear the registration form
+                // Optionally, switch to the login form automatically
+                // setTimeout(() => {
+                //     showLoginLink.click();
+                //     clearFeedback(registerFeedback);
+                // }, 3000); // Switch after 3 seconds
+            }
             return data;
 
         } catch (error) {
@@ -183,13 +191,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = loginEmailInput.value.trim();
+            const userId = loginUserIdInput.value.trim(); // Changed from email
             const password = loginPasswordInput.value.trim();
-            if (!email || !password) {
-                displayFeedback(loginFeedback, 'Email and password are required.', false);
+            if (!userId || !password) {
+                displayFeedback(loginFeedback, 'User ID and password are required.', false); // Updated message
                 return;
             }
-            await handleAuthRequest('/.netlify/functions/login', { email, password }, loginFeedback);
+            // Basic validation for User ID format (8 digits, starts with 90)
+            if (!/^90\d{6}$/.test(userId)) {
+                displayFeedback(loginFeedback, 'Invalid User ID format. Must be 8 digits starting with 90.', false);
+                return;
+            }
+            await handleAuthRequest('/.netlify/functions/login', { userId, password }, loginFeedback);
         });
     }
 
@@ -197,13 +210,24 @@ document.addEventListener('DOMContentLoaded', () => {
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const username = registerUsernameInput.value.trim();
-            const email = registerEmailInput.value.trim();
             const password = registerPasswordInput.value.trim();
-            if (!username || !email || !password) {
-                displayFeedback(registerFeedback, 'Username, email, and password are required.', false);
+            const profilePicture = registerProfilePictureInput.value.trim(); // Get profile picture URL
+
+            if (!username || !password) {
+                displayFeedback(registerFeedback, 'Username and password are required.', false);
                 return;
             }
-            await handleAuthRequest('/.netlify/functions/register', { username, email, password }, registerFeedback);
+            if (password.length < 6) {
+                 displayFeedback(registerFeedback, 'Password must be at least 6 characters long.', false);
+                return;
+            }
+
+            const body = { username, password };
+            if (profilePicture) {
+                body.profilePicture = profilePicture;
+            }
+
+            await handleAuthRequest('/.netlify/functions/register', body, registerFeedback, true);
         });
     }
 
@@ -213,6 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loginFormContainer.style.display = 'none';
             registerFormContainer.style.display = 'block';
             clearFeedback(loginFeedback, registerFeedback);
+            loginForm.reset();
         });
     }
 
@@ -222,6 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
             registerFormContainer.style.display = 'none';
             loginFormContainer.style.display = 'block';
             clearFeedback(loginFeedback, registerFeedback);
+            registerForm.reset();
         });
     }
 
@@ -230,12 +256,11 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             updateAuthUI(false);
-            if (conversationList) conversationList.innerHTML = ''; // Clear conversation list on logout
-            if (messagesList) messagesList.innerHTML = ''; // Clear messages on logout
+            if (conversationList) conversationList.innerHTML = '';
+            if (messagesList) messagesList.innerHTML = '';
             if (currentChatUsername) currentChatUsername.textContent = '';
             if (currentChatAvatar) currentChatAvatar.src = 'https://via.placeholder.com/40';
             if (currentChatStatus) currentChatStatus.textContent = '';
-            // Optionally, inform the server about logout if needed
         });
     }
 
@@ -247,111 +272,115 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Disconnect existing socket if any before creating a new one
         if (socket && socket.connected) {
             socket.disconnect();
         }
 
-        // Connect to the server with authentication token
-        socket = io({
-            auth: { token }
-            // For older versions of socket.io client, you might need:
-            // query: { token }
-        });
+        socket = io({ auth: { token } });
 
         socket.on('connect', () => {
             console.log('Socket connected successfully with ID:', socket.id);
-            appendMessageToListHelper('Connected to chat!', 'system');
-            // You can now emit events that require authentication
+            const user = JSON.parse(localStorage.getItem('user'));
+            appendMessageToListHelper(`Connected as ${user.username}!`, 'system');
         });
 
         socket.on('connect_error', (err) => {
             console.error('Socket connection error:', err.message);
             appendMessageToListHelper(`Connection Error: ${err.message}. Try refreshing.`, 'error');
-            // Handle auth errors, e.g., invalid token
             if (err.message === 'Invalid token' || err.message === 'Authentication error') {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
-                updateAuthUI(false); // Log out user
+                updateAuthUI(false);
             }
         });
 
         socket.on('disconnect', (reason) => {
             console.log('Socket disconnected:', reason);
             appendMessageToListHelper(`Disconnected: ${reason}`, 'system');
-            // If disconnected due to server-side auth error, could also trigger logout
-            if (reason === 'io server disconnect') { // Often due to auth failure mid-session
-                 // Consider if re-authentication or UI update is needed
-            }
         });
 
-        // Example: Handle incoming chat messages (to be implemented fully later)
         socket.on('chat message', (msgData) => {
-            // msgData might be { user: 'username', text: 'message content', timestamp: ... }
-            appendMessageToListHelper(msgData.text, msgData.type || 'chat', msgData.user, msgData.time);
+            // msgData: { user: { username: 'senderName', profilePicture: 'url' }, text: 'message', time: 'HH:MM AM/PM', type: 'received' }
+            const localUser = JSON.parse(localStorage.getItem('user'));
+            // Determine if message is sent or received based on sender's ID if available, or username
+            // For now, if msgData.user.username is not the localUser.username, it's 'received'
+            const type = (msgData.user && localUser && msgData.user.username === localUser.username) ? 'sent' : 'received';
+            appendMessageToList(msgData.text, type , msgData.user.username, msgData.time, msgData.user.profilePicture);
+        });
+
+        // Placeholder for user list updates
+        socket.on('update userList', (users) => {
+            console.log('Received user list update:', users);
+            // This is where you'd update the UI that lists online users or conversations
+            // For now, we are using mockConversations. This would replace/update that.
         });
     }
 
-    // --- Chat Message Handling (Basic for now) ---
+    // --- Chat Message Handling ---
     if (messageForm) {
         messageForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const messageText = messageInput.value.trim();
-            if (messageText) {
-                if (socket && socket.connected) {
-                    // Emit message to server (to be implemented on server)
-                    // For now, we'll just add it to the mock data for the current conversation
-                    // and re-render. In a real app, server would send it back.
-                    const currentConvoUsername = currentChatUsername.textContent;
-                    if (mockConversations[currentConvoUsername]) {
-                        const newMsg = {
-                            sender: "You",
-                            text: messageText,
-                            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                            type: "sent"
-                        };
-                        mockConversations[currentConvoUsername].messages.push(newMsg);
-                        // append this new message to the UI directly
-                        appendMessageToList(newMsg.text, newMsg.type, newMsg.sender, newMsg.time);
-                    }
-                } else {
-                     // If socket not connected, still add to UI for local demo feel
-                    appendMessageToList(messageText, "sent", "You", new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-                    // appendMessageToListHelper('Not connected. Message shown locally.', 'error');
-                }
+            if (messageText && socket && socket.connected) {
+                const user = JSON.parse(localStorage.getItem('user'));
+                const messageData = {
+                    // text: messageText, // Server will get this from the actual message event
+                    // No need to send user object here, server knows from socket
+                };
+                socket.emit('chat message', messageText); // Just send the text
+
+                // Optimistically display sent message (server should confirm or send it back to all clients including sender)
+                // appendMessageToList(messageText, "sent", user.username, new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), user.profilePicture);
+                // Server will broadcast, so sender will also receive it via 'chat message' event.
+                // This prevents displaying the message twice if server echoes back to sender.
+                // If server does NOT echo to sender, then uncomment the line above.
+
                 messageInput.value = '';
+            } else if (messageText) {
+                appendMessageToListHelper('Not connected. Cannot send message.', 'error');
             }
         });
     }
 
-    function appendMessageToList(text, type = 'chat', sender = '', time = '') {
+    function appendMessageToList(text, type = 'chat', senderName = '', time = '', avatarUrl = 'https://via.placeholder.com/40') {
         if (!messagesList) return;
         const listItem = document.createElement('li');
         listItem.classList.add('message-item');
-        if (type === 'sent') {
+
+        // Simple distinction for sent/received for now
+        const localUser = JSON.parse(localStorage.getItem('user'));
+        if (localUser && senderName === localUser.username) {
             listItem.classList.add('message-sent');
         } else {
             listItem.classList.add('message-received');
         }
+        // For a more robust system, message type ('sent'/'received') should come from server or be based on a unique sender ID
+
+        // Include avatar in message display if it's a received message from another user
+        let avatarImg = '';
+        if (type === 'received' && senderName) { // Show avatar for received messages
+             // avatarImg = `<img src="${avatarUrl || 'https://via.placeholder.com/30?text=?'}" alt="${senderName}" class="message-avatar">`;
+        }
+        // Currently, the CSS is not set up for avatars inside messages, but structure is here if needed.
 
         listItem.innerHTML = `
-            <div class="message-content">${text}</div>
+            ${avatarImg}
+            <div class="message-content-wrapper">
+                ${type === 'received' && senderName ? `<p class="message-sender-name">${senderName}</p>` : ''}
+                <div class="message-content">${text}</div>
+            </div>
             <span class="message-timestamp">${time}</span>
         `;
+        // If CSS requires sender name inside message-content for styling, adjust structure.
         messagesList.appendChild(listItem);
         scrollToBottom();
     }
 
-    // Wrapper for system/error messages that don't have sender/time in the same way
     function appendMessageToListHelper(text, type = 'system') {
         if (!messagesList) return;
         const listItem = document.createElement('li');
-        listItem.textContent = text;
-        if (type === 'system') listItem.style.fontStyle = 'italic';
-        if (type === 'error') {
-            listItem.style.color = 'red';
-            listItem.style.textAlign = 'center';
-        }
+        listItem.classList.add('message-item', `message-${type}`); // e.g. message-system, message-error
+        listItem.innerHTML = `<div class="message-content">${text}</div>`;
         messagesList.appendChild(listItem);
         scrollToBottom();
     }
@@ -373,6 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const user = JSON.parse(userString);
                 updateAuthUI(true, user);
             } catch (e) {
+                console.error("Error parsing user from localStorage:", e);
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
                 updateAuthUI(false);
@@ -382,5 +412,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    checkInitialAuthState(); // Check auth state on page load
+    checkInitialAuthState();
 });
