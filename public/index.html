@@ -3,126 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat App - Neon Edition</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>Hovani Store</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" href="logo.svg" type="image/svg+xml">
 </head>
 <body>
-    <div id="app-container">
-        <header>
-            <h1>Chat App</h1>
-            <div id="user-status">
-                <span id="username-display">Not logged in</span>
-                <button id="logout-button" style="display:none;">Logout</button>
-            </div>
-        </header>
-
-        <main>
-            <div id="auth-container">
-                <div id="login-form-container">
-                    <h2>Login</h2>
-                    <form id="login-form">
-                        <div>
-                            <label for="login-userid">User ID:</label>
-                            <input type="text" id="login-userid" name="userid" required pattern="^90\d{6}$" title="User ID must be 8 digits starting with 90.">
-                        </div>
-                        <div>
-                            <label for="login-password">Password:</label>
-                            <input type="password" id="login-password" name="password" required>
-                        </div>
-                        <button type="submit">Login</button>
-                        <p class="auth-feedback" id="login-feedback"></p>
-                    </form>
-                    <p>Don't have an account? <a href="#" id="show-register-link">Register here</a></p>
-                </div>
-
-                <div id="register-form-container" style="display:none;">
-                    <h2>Register</h2>
-                    <form id="register-form">
-                        <div>
-                            <label for="register-username">Username (Display Name):</label>
-                            <input type="text" id="register-username" name="username" required>
-                        </div>
-                        <div>
-                            <label for="register-password">Password:</label>
-                            <input type="password" id="register-password" name="password" required minlength="6">
-                        </div>
-                        <div>
-                            <label for="register-profile-picture">Profile Picture URL (Optional):</label>
-                            <input type="url" id="register-profile-picture" name="profilePicture" placeholder="https://example.com/image.png">
-                        </div>
-                        <p>Your unique 8-digit User ID will be generated upon successful registration.</p>
-                        <button type="submit">Register</button>
-                        <p class="auth-feedback" id="register-feedback"></p>
-                    </form>
-                    <p>Already have an account? <a href="#" id="show-login-link">Login here</a></p>
-                </div>
-            </div>
-
-            <div id="chat-container" style="display:none; height: calc(100vh - 120px);"> <!-- Adjust height as needed -->
-                <div class="chat-layout">
-                    <!-- Left Column: User/Conversation List -->
-                    <aside id="conversation-list-container">
-                        <header id="conversation-list-header">
-                            <input type="search" placeholder="Search or start new chat" id="conversation-search">
-                        </header>
-                        <ul id="conversation-list">
-                            <!-- Placeholder items will be added in next step -->
-                            <li class="conversation-item active-conversation">
-                                <img src="https://via.placeholder.com/40?text=U1" alt="User 1" class="avatar">
-                                <div class="conversation-details">
-                                    <p class="conversation-name">User One</p>
-                                    <p class="conversation-snippet">Hey, how are you?</p>
-                                </div>
-                                <span class="conversation-timestamp">10:30 AM</span>
-                            </li>
-                            <li class="conversation-item">
-                                <img src="https://via.placeholder.com/40?text=U2" alt="User 2" class="avatar">
-                                <div class="conversation-details">
-                                    <p class="conversation-name">Another User</p>
-                                    <p class="conversation-snippet">See you later!</p>
-                                </div>
-                                <span class="conversation-timestamp">Yesterday</span>
-                            </li>
-                        </ul>
-                    </aside>
-
-                    <!-- Right Column: Active Chat Window -->
-                    <section id="active-chat-container">
-                        <header id="active-chat-header">
-                            <img src="https://via.placeholder.com/40?text=U1" alt="Current Chat User" class="avatar" id="current-chat-avatar">
-                            <div>
-                                <h2 id="current-chat-username">User One</h2>
-                                <p id="current-chat-status">Online</p> <!-- Placeholder -->
-                            </div>
-                            <!-- More actions can go here e.g., call, info -->
-                        </header>
-
-                        <div id="chat-window"> <!-- Message display area -->
-                            <ul id="messages">
-                                <!-- Placeholder messages will be styled in next step -->
-                                <li class="message-item message-received">
-                                    <div class="message-content">Hello! How are you doing today?</div>
-                                    <span class="message-timestamp">10:28 AM</span>
-                                </li>
-                                <li class="message-item message-sent">
-                                    <div class="message-content">I'm good, thanks for asking! Just working on this chat app.</div>
-                                    <span class="message-timestamp">10:30 AM</span>
-                                </li>
-                            </ul>
-                        </div>
-
-                        <form id="message-form"> <!-- Message input area -->
-                            <button type="button" id="attachment-button" aria-label="Attach file">📎</button>
-                            <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
-                            <button type="submit" id="send-button" aria-label="Send message">➡️</button>
-                        </form>
-                    </section>
-                </div>
-            </div>
-        </main>
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <p>Loading Hovani...</p>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="js/main.js"></script>
+    <header id="main-header">
+        <div class="container">
+            <img src="logo.svg" alt="Hovani Logo" id="logo">
+            <nav>
+                <ul>
+                    <li><a href="#home">Home</a></li>
+                    <li><a href="#products">Products</a></li>
+                    <li><a href="#checkout">Checkout</a></li>
+                </ul>
+            </nav>
+            <div class="settings">
+                <!-- Theme switcher and language selector will go here -->
+                <button id="theme-switcher">Toggle Theme</button>
+                <select id="language-selector">
+                    <option value="en">English</option>
+                    <option value="ar" disabled>العربية (Soon)</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <main id="app-root">
+        <!-- React/Vue/Angular app will mount here -->
+        <section id="home">
+            <h1>Welcome to Hovani</h1>
+            <p>Modern, Stylish, Powerful.</p>
+        </section>
+        <section id="products">
+            <h2>Our Products</h2>
+            <!-- Product cards will be rendered here by app.js -->
+        </section>
+        <section id="single-product-page" style="display: none;">
+            <!-- Content will be dynamically inserted by app.js -->
+            <div class="container product-detail-container">
+                <button id="back-to-products">← Back to Products</button>
+                <div class="product-detail-layout">
+                    <div class="product-detail-image-gallery">
+                        <img src="" alt="Product Image" id="main-product-image">
+                        <!-- Thumbnails could go here -->
+                    </div>
+                    <div class="product-detail-info">
+                        <h1 id="product-detail-name">Product Name</h1>
+                        <p class="product-detail-price">$0.00</p>
+                        <p id="product-detail-description">Full product description here...</p>
+                        <div class="product-detail-actions">
+                            <label for="quantity">Quantity:</label>
+                            <input type="number" id="quantity" name="quantity" value="1" min="1" max="10">
+                            <button id="add-to-cart-detail" class="add-to-cart-btn">Add to Cart</button>
+                        </div>
+                        <div class="product-meta">
+                            <span>Category: <a href="#" id="product-category-link">Category Name</a></span>
+                            <span>SKU: <span id="product-sku">SKU12345</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section id="checkout-page" style="display: none;">
+             <!-- Checkout form will be here -->
+        </section>
+    </main>
+
+    <footer id="main-footer">
+        <div class="container">
+            <p>&copy; 2024 Hovani. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script> <!-- Placeholder for main JS/React bundle -->
 </body>
 </html>
